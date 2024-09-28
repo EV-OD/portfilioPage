@@ -14,6 +14,7 @@
 	} from 'three';
 	import B1 from './pack/b1.svelte';
 	import B2 from './pack/b2.svelte';
+	import B2_5 from './pack/b2_5.svelte';
 
 	const targetObject = new Object3D();
 	targetObject.position.set(50, 1, 0);
@@ -23,7 +24,7 @@
 	targetObject.layers.enable(2);
 
 	// Create the point light
-	const pointLight = new PointLight(0xffffff, 10, 100);
+	const pointLight = new PointLight(0xffffff, 7, 100);
 	pointLight.position.set(1, 1, 0);
 	pointLight.layers.enableAll();
 
@@ -31,6 +32,7 @@
 	scene.add(pointLight);
     let b1TotalWidth:number;
     let b2TotalWidth:number;
+    let b2_5TotalWidth:number;
 
 </script>
 
@@ -43,12 +45,25 @@
 /> -->
 <T.Group scale={0.1} layers={[2]}>
 	<!-- {#each Array(10).fill(0) as _, i} -->
-     <!-- <T.Group position.z={b1TotalWidth / 2}>
+     <T.Group position.z={b1TotalWidth / 2}>
          <B1 bind:totalWidth={b1TotalWidth}/>
      </T.Group>
      <T.Group position.z={b2TotalWidth}>
         <B2 bind:totalWidth={b2TotalWidth} />
-        </T.Group> -->
-        <Building2/>
+     </T.Group>
+     <T.Group position.z={b2TotalWidth + b2_5TotalWidth}>
+        <B2_5 bind:totalWidth={b2_5TotalWidth} />
+     </T.Group>
+     
+
+     <T.Group position.z={1+ b1TotalWidth / -2}>
+        <B1 bind:totalWidth={b1TotalWidth}/>
+    </T.Group>
+    <T.Group position.z={-5-b2TotalWidth}>
+       <B2 bind:totalWidth={b2TotalWidth} />
+    </T.Group>
+    <T.Group position.z={5+ b1TotalWidth / -2}>
+        <B1 bind:totalWidth={b1TotalWidth}/>
+    </T.Group>
 	<!-- {/each} -->
 </T.Group>

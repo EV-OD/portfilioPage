@@ -14,7 +14,7 @@
     </T.Group>
 </T.Group>
 <T.Group position.x={50} position.z={b2RotatedWidth / 2}>
-    <T.Group rotation.y={Math.PI}>
+    <T.Group rotation.y={Math.PI / 2}>
         <Building2 />
     </T.Group>
 </T.Group>

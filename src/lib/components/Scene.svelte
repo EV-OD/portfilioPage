@@ -3,16 +3,19 @@
   import { ContactShadows, Float, Grid, OrbitControls, HTML } from '@threlte/extras'
   import { interactivity } from '@threlte/extras'
   import { spring } from 'svelte/motion'
-  import { tweened } from 'svelte/motion'
   import { cubicOut } from 'svelte/easing'
   import ToyCar from './models/toyCar.svelte';
   import Arrow from './custom-model/arrow.svelte';
   import Road from './models/ROAD.svelte';
   import Typewriter from 'svelte-typewriter'
-  import { Vector3 } from 'three';
+  import { BoxGeometry, Vector3, MeshStandardMaterial, Group, type Object3DEventMap } from 'three';
 	import BuildingPack from './custom-model/buildingPack.svelte';
   import { layers } from '@threlte/extras'
-layers()
+  import { tweened } from 'svelte/motion';
+  import { AutoColliders, CollisionGroups, Debug } from '@threlte/rapier'
+  import type { ActionName } from "./models/toyCar.svelte"
+
+  layers()
 
   interactivity()
 
@@ -30,7 +33,14 @@ layers()
 
   let cameraGroupRotation = spring(0, { stiffness: 0.01, damping: 0.3 })
   let isRotating = false
-  let rotationDirection = 1; // 1 for clockwise, -1 for counterclockwise
+  let rotationDirection = 1; // 1 for clockwise, -1 for 
+  let carIsMoving:1 | -1 | 0 = 1;
+  let carPosZFinal = 0;
+  let toyCarRef:(Group<Object3DEventMap> & Group<Object3DEventMap>) | undefined;
+  let playAnimation: (animationName: ActionName) => void;
+  let stopAnimation: (animationName: ActionName) => void;
+  
+  let buildingPackScale = tweened(0,{duration:300, delay:300,easing:cubicOut})
 
   function handleExplore() {
     showOptions = false
@@ -54,7 +64,6 @@ layers()
   function startJourney() {
     animationAngle = 0 // Reset animation angle
     isMenuShown = true
-    isContentShown = false
     isRotating = true
     rotationDirection = 1 // Rotate clockwise
     cameraVector = new Vector3(0, $cameraPosY, 10)
@@ -64,8 +73,14 @@ layers()
     if (userDetailState === "menu") {
       animationAngle = 0 // Reset animation angle
       isRotating = true
+      isContentShown = true
       rotationDirection = -1 // Rotate counterclockwise
+      $buildingPackScale = 0;
     }
+  }
+
+  function handleProject(){
+
   }
 
   useTask(delta => {
@@ -76,6 +91,7 @@ layers()
           userDetailState = "menu"
           isMenuShown = true
           isContentShown = false
+          $buildingPackScale = 1
         }else if(userDetailState === "menu" && rotationDirection === -1){
           userDetailState = "main"
           isMenuShown = false
@@ -109,7 +125,34 @@ layers()
       // isMenuShown = true;
     }
   }
+  $:{
+    if(carIsMoving == 1 || carIsMoving == -1){
+      if(playAnimation && stopAnimation){
+        console.log(carIsMoving)
+        playAnimation('1st')
+          if(carPosZFinal == $carPosZ){
+            carIsMoving = 0;
+            stopAnimation('1st')
+          }
+      }
+    }
+  }
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'ArrowRight') {
+      carIsMoving = 1;
+      carPosZFinal = $carPosZ + 0.4
+      $carPosZ += 0.4
+
+    }else if(e.key === 'ArrowLeft'){
+      carIsMoving = -1;
+      carPosZFinal = $carPosZ + 0.4
+      $carPosZ -= 0.4
+    }
+  }
 </script>
+
+<svelte:window on:keydown|preventDefault={onKeyDown} />
 
 <T.Group  position={cameraVector.toArray()} layers={"all"}>
   <T.PerspectiveCamera
@@ -147,9 +190,25 @@ layers()
   penumbra={1}
   castShadow
 />
+<CollisionGroups groups={[0]}>
 <T.Group position.z={$carPosZ} scale={0.13} rotation.y={0} layers={[1]}>
-  <!-- <ToyCar/> -->
+  <ToyCar ref={toyCarRef} bind:playAnimation={playAnimation} bind:stopAnimation={stopAnimation} />
 </T.Group>
+</CollisionGroups>
+
+<AutoColliders shape={'cuboid'}>
+  <T.Mesh
+    receiveShadow
+    castShadow
+    position={[0,1,10]}
+    geometry={new BoxGeometry(60, 2.55, 0.15)}
+    material={new MeshStandardMaterial({
+      transparent: true,
+      opacity: 0.5,
+      color: 0x333333
+    })}
+  />
+</AutoColliders>
 
 
 
@@ -158,7 +217,7 @@ layers()
   <Road />
 </T.Group>
 
-<T.Group>
+<T.Group scale={$buildingPackScale}>
   <BuildingPack/>
 </T.Group>
 
@@ -204,11 +263,7 @@ layers()
 </HTML>
 <HTML transform position.x={10} position.z={3} rotation.y={Math.PI / -2} position.y={3}  scale={0.2}>
   <div class="project">
-    Find me
-    <svg width="40"  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
-      <path fill-rule="evenodd" d="M12 2.25a.75.75 0 0 1 .75.75v16.19l2.47-2.47a.75.75 0 1 1 1.06 1.06l-3.75 3.75a.75.75 0 0 1-1.06 0l-3.75-3.75a.75.75 0 0 1 1.06-1.06l2.47-2.47V3a.75.75 0 0 1 .75-.75Z" clip-rule="evenodd" />
-    </svg>
-    
+    Find me    
   </div>
 </HTML>
 <HTML transform position.x={10} position.z={-3} rotation.y={Math.PI / -2} position.y={3}  scale={0.2}>
