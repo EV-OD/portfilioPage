@@ -1,13 +1,18 @@
 <script lang="ts">
-  import { T } from '@threlte/core'
+  import { T, useTask } from '@threlte/core'
   import { ContactShadows, Float, Grid, OrbitControls, HTML } from '@threlte/extras'
   import { interactivity } from '@threlte/extras'
   import { spring } from 'svelte/motion'
   import { tweened } from 'svelte/motion'
   import { cubicOut } from 'svelte/easing'
   import ToyCar from './models/toyCar.svelte';
-	import Arrow from './custom-model/arrow.svelte';
-	import Road from './models/ROAD.svelte';
+  import Arrow from './custom-model/arrow.svelte';
+  import Road from './models/ROAD.svelte';
+  import Typewriter from 'svelte-typewriter'
+  import { Vector3 } from 'three';
+	import BuildingPack from './custom-model/buildingPack.svelte';
+  import { layers } from '@threlte/extras'
+layers()
 
   interactivity()
 
@@ -18,6 +23,15 @@
   let carPosZ = spring(-10, { stiffness: 0.005, damping: 0.2 })
   let directionalLightIntensity = spring(0.1)
   let cameraPosY = spring(0, { stiffness: 0.05, damping: 0.4 })
+  let userDetailState:"main"|"menu" | "projects" | "skills" | "find-me" = "main"
+
+  let isMenuShown = false;
+  let isContentShown = false;
+
+  let cameraGroupRotation = spring(0, { stiffness: 0.01, damping: 0.3 })
+  let isRotating = false
+  let rotationDirection = 1; // 1 for clockwise, -1 for counterclockwise
+
   function handleExplore() {
     showOptions = false
     $spotLightPos = 5
@@ -26,24 +40,89 @@
     $cameraPosY = 0.1
     $carPosZ = 0
   }
+  let cameraVector: Vector3 = new Vector3(0, $cameraPosY, 10)
+  $:{
+    cameraVector = new Vector3(0, $cameraPosY, 10)
+  }
+  let animationAngle = 0;
 
   function handleBasicMode() {
     // Implement basic mode logic here
     console.log("Switching to basic mode")
   }
 
+  function startJourney() {
+    animationAngle = 0 // Reset animation angle
+    isMenuShown = true
+    isContentShown = false
+    isRotating = true
+    rotationDirection = 1 // Rotate clockwise
+    cameraVector = new Vector3(0, $cameraPosY, 10)
+  }
+
+  function handleBack() {
+    if (userDetailState === "menu") {
+      animationAngle = 0 // Reset animation angle
+      isRotating = true
+      rotationDirection = -1 // Rotate counterclockwise
+    }
+  }
+
+  useTask(delta => {
+    if (Math.abs(animationAngle) > Math.PI / 2) {
+      isRotating = false
+      // this means we were at main and it will go to menu
+      if(userDetailState === "main" && rotationDirection === 1){
+          userDetailState = "menu"
+          isMenuShown = true
+          isContentShown = false
+        }else if(userDetailState === "menu" && rotationDirection === -1){
+          userDetailState = "main"
+          isMenuShown = false
+          isContentShown = true
+        }
+      
+      if (rotationDirection === -1) {
+        // Reset states after rotating back
+
+        // Add any other necessary resets
+      }
+    } else {
+      if (isRotating) {
+        animationAngle += delta * 1.1 * rotationDirection;
+        let diffAngle;
+        if(userDetailState === "menu"){
+          diffAngle = cameraVector.angleTo(new Vector3(-10, $cameraPosY, 0)) - Math.abs(animationAngle); 
+        }else if(userDetailState === "main"){
+          diffAngle = cameraVector.angleTo(new Vector3(0, $cameraPosY, 10)) - Math.abs(animationAngle); 
+        }
+        if(diffAngle){
+          cameraVector = cameraVector.applyAxisAngle(new Vector3(0, 1, 0), diffAngle * rotationDirection);
+        }
+      }
+    }
+  })
+
+  $:{
+    if($carPosZ > -5){
+      isContentShown = true;
+      // isMenuShown = true;
+    }
+  }
 </script>
 
-<T.PerspectiveCamera
-  makeDefault
-  position={[0, $cameraPosY, 10]}
-  fov={20}
->
-  <OrbitControls
-    enableZoom={false}
-    enableDamping
-  />
-</T.PerspectiveCamera>
+<T.Group  position={cameraVector.toArray()} layers={"all"}>
+  <T.PerspectiveCamera
+    makeDefault
+    fov={20}
+  >
+    <OrbitControls
+      enableZoom={false}
+      enableDamping
+      enabled={!isRotating}
+    />
+  </T.PerspectiveCamera>
+</T.Group>
 
 <T.Mesh
   rotation.x={-Math.PI / 2}
@@ -68,25 +147,79 @@
   penumbra={1}
   castShadow
 />
-<T.Group position.z={$carPosZ} scale={0.13} rotation.y={0}>
-  <ToyCar/>
+<T.Group position.z={$carPosZ} scale={0.13} rotation.y={0} layers={[1]}>
+  <!-- <ToyCar/> -->
 </T.Group>
 
-<!-- <Arrow/> -->
+
+
 
 <T.Group scale={[0.5,0.001,0.5]}  position.y={0}>
-  <Road/>
+  <Road />
 </T.Group>
 
-<HTML transform position.z={-10} position.y={3} scale={0.2}>
+<T.Group>
+  <BuildingPack/>
+</T.Group>
+
+{#if isContentShown}
+<HTML transform position.z={-10} position.y={2} scale={0.2}>
 <div class="hero">
-  <h1>Welcome to My Portfolio</h1>
-  <p>Hi, I'm Alex, a passionate web developer with a knack for creating dynamic and responsive web applications. With a strong foundation in JavaScript, Svelte, and modern web technologies, I strive to build user-friendly and efficient solutions. Explore my projects and get to know more about my work.</p>
+  <Typewriter mode="concurrent">
+  <h1>Welcome to My World</h1>
+  </Typewriter>
+  <Typewriter mode="loop">
+  <p>Hi, I'm <strong class="high head-high">Rabin</strong>, a passionate <strong class="high">developer</strong> with a knack for creating dynamic and responsive applications. With a strong foundation in JavaScript, Svelte, and modern web technologies, I strive to build user-friendly and efficient solutions. Explore my projects and get to know more about my work.</p>
+  </Typewriter>
 </div>
 </HTML>
+<HTML transform position.z={-10} position.y={1} position.x={3} scale={0.2}>
+  <div class="project" on:click={startJourney}>
+    Let's Start the Journey !
+    <svg width="40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
+      <path fill-rule="evenodd" d="M16.72 7.72a.75.75 0 0 1 1.06 0l3.75 3.75a.75.75 0 0 1 0 1.06l-3.75 3.75a.75.75 0 1 1-1.06-1.06l2.47-2.47H3a.75.75 0 0 1 0-1.5h16.19l-2.47-2.47a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+    </svg>
+    
+  </div>
+</HTML>
+{/if}
 
-
-
+{#if isMenuShown}
+<HTML transform position.x={10} position.z={1} rotation.y={Math.PI / -2} position.y={3}  scale={0.2}>
+  <div class="project">
+    Projects
+    <svg width="40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
+      <path fill-rule="evenodd" d="M16.72 7.72a.75.75 0 0 1 1.06 0l3.75 3.75a.75.75 0 0 1 0 1.06l-3.75 3.75a.75.75 0 1 1-1.06-1.06l2.47-2.47H3a.75.75 0 0 1 0-1.5h16.19l-2.47-2.47a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+    </svg>
+    
+  </div>
+</HTML>
+<HTML transform position.x={10} position.z={2} rotation.y={Math.PI / -2} position.y={3} scale={0.2}>
+  <div class="project">
+    Skills
+    <svg width="40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
+      <path fill-rule="evenodd" d="M7.28 7.72a.75.75 0 0 1 0 1.06l-2.47 2.47H21a.75.75 0 0 1 0 1.5H4.81l2.47 2.47a.75.75 0 1 1-1.06 1.06l-3.75-3.75a.75.75 0 0 1 0-1.06l3.75-3.75a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
+    </svg>
+  </div>
+</HTML>
+<HTML transform position.x={10} position.z={3} rotation.y={Math.PI / -2} position.y={3}  scale={0.2}>
+  <div class="project">
+    Find me
+    <svg width="40"  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
+      <path fill-rule="evenodd" d="M12 2.25a.75.75 0 0 1 .75.75v16.19l2.47-2.47a.75.75 0 1 1 1.06 1.06l-3.75 3.75a.75.75 0 0 1-1.06 0l-3.75-3.75a.75.75 0 0 1 1.06-1.06l2.47-2.47V3a.75.75 0 0 1 .75-.75Z" clip-rule="evenodd" />
+    </svg>
+    
+  </div>
+</HTML>
+<HTML transform position.x={10} position.z={-3} rotation.y={Math.PI / -2} position.y={3}  scale={0.2}>
+  <div class="project" on:click={handleBack}>
+    Back
+    <svg width="40" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
+      <path fill-rule="evenodd" d="M9.53 2.47a.75.75 0 0 1 0 1.06L4.81 8.25H15a6.75 6.75 0 0 1 0 13.5h-3a.75.75 0 0 1 0-1.5h3a5.25 5.25 0 1 0 0-10.5H4.81l4.72 4.72a.75.75 0 1 1-1.06 1.06l-6-6a.75.75 0 0 1 0-1.06l6-6a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
+    </svg>    
+  </div>
+</HTML>
+{/if}
 
 {#if showOptions}
 <HTML
@@ -104,7 +237,6 @@ transform
 </div>
 </HTML>
 {/if}
-
 
 <style>
   h3{
@@ -156,11 +288,38 @@ transform
     background-color: #1e1e1e;
     transform: scale(0.95);
   }
-
-  
+  .hero h1{
+    font-size: 2.8rem;
+  }
+  .hero p{
+    font-size:1.5em;
+    line-height: 3ch;
+  }
+  .project{
+    background-color: transparent;
+    padding: 20px;
+    border-radius: 10px;
+    border: 2px solid #3c4659;
+    color:black;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-size: 2em;
+    cursor:pointer;
+    display:flex;
+    justify-content: center;
+    gap:10px;
+  }
+  .project:hover{
+    background-color: #222731;
+    color:white;
+  }
+  .high{
+    background-color: rgb(76, 73, 73);
+    color:white;
+    padding:5px 10px;
+    font-size:1.6em;
+    border-radius:5px;
+  }
+  .head-high{
+    background-color: rgb(190,100,100);
+  }
 </style>
-
-
-
-
-

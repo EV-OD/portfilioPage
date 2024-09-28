@@ -52,6 +52,11 @@ Command: npx @threlte/gltf@2.0.3 D:\projects\portfolio\static\models\scene.glb -
   export const { actions, mixer } = useGltfAnimations<ActionName>(gltf, ref)
 
   const component = forwardEventHandlers()
+  $:{
+    if($actions['1st'] && $actions['2nd'] && $actions['3rd']){
+      // $actions['1st']?.play()
+    }
+  }
 </script>
 
 <T is={ref} dispose={false} {...$$restProps} bind:this={$component}>
