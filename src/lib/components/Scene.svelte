@@ -3,7 +3,7 @@
   import { ContactShadows, Float, Grid, OrbitControls, HTML } from '@threlte/extras'
   import { interactivity } from '@threlte/extras'
   import { spring } from 'svelte/motion'
-  import { cubicOut } from 'svelte/easing'
+  import { cubicOut, expoInOut } from 'svelte/easing'
   import ToyCar from './models/toyCar.svelte';
   import Arrow from './custom-model/arrow.svelte';
   import Road from './models/ROAD.svelte';
@@ -23,7 +23,8 @@
   let spotLightPos = spring(2)
   let spotLightIntensity = spring(4)
   let spotLightAngle = spring(Math.PI)
-  let carPosZ = spring(-10, { stiffness: 0.005, damping: 0.2 })
+  let carPosZ = tweened(-10, { duration: 2000, easing: cubicOut })
+  let carPosZ2 = tweened(0, { duration: 1000, easing: expoInOut })
   let directionalLightIntensity = spring(0.1)
   let cameraPosY = spring(0, { stiffness: 0.05, damping: 0.4 })
   let userDetailState:"main"|"menu" | "projects" | "skills" | "find-me" = "main"
@@ -39,6 +40,9 @@
   let toyCarRef:(Group<Object3DEventMap> & Group<Object3DEventMap>) | undefined;
   let playAnimation: (animationName: ActionName) => void;
   let stopAnimation: (animationName: ActionName) => void;
+  let playForwardMovingAnimation: () => void;
+  let playBackwardMovingAnimation: () => void;
+  let stopMovingAnimation: () => void;
   
   let buildingPackScale = tweened(0,{duration:300, delay:300,easing:cubicOut})
 
@@ -125,30 +129,42 @@
       // isMenuShown = true;
     }
   }
-  $:{
-    if(carIsMoving == 1 || carIsMoving == -1){
-      if(playAnimation && stopAnimation){
-        console.log(carIsMoving)
-        playAnimation('1st')
-          if(carPosZFinal == $carPosZ){
-            carIsMoving = 0;
-            stopAnimation('1st')
-          }
-      }
+
+  let shouldGoLeft = true;
+  let shouldGoRight = true;
+
+  const setCarPosZ = async (posZ: number) => {
+    // play animation
+    if (carIsMoving === 1) {
+      playForwardMovingAnimation();
+    } else if(carIsMoving === -1){ 
+      playBackwardMovingAnimation()
+    }else{
+      console.log("stopping moving")
+      stopMovingAnimation()
     }
+    await carPosZ.set(posZ)
+    shouldGoLeft = true
+    shouldGoRight = true
+    carIsMoving = 0
+    stopMovingAnimation()
+    console.log("finished moving")
+    
   }
 
   const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'ArrowRight') {
-      carIsMoving = 1;
-      carPosZFinal = $carPosZ + 0.4
-      $carPosZ += 0.4
-
-    }else if(e.key === 'ArrowLeft'){
-      carIsMoving = -1;
-      carPosZFinal = $carPosZ + 0.4
-      $carPosZ -= 0.4
-    }
+      if (e.key === 'ArrowRight' && shouldGoRight) {
+        carIsMoving = 1;
+        shouldGoLeft = false
+        carPosZFinal = $carPosZ + carIsMoving
+        setCarPosZ(carPosZFinal)
+      }
+      if(e.key === 'ArrowLeft' && shouldGoLeft){
+          carIsMoving = -1;
+          shouldGoRight = false
+          carPosZFinal = $carPosZ + carIsMoving
+          setCarPosZ(carPosZFinal)
+      }
   }
 </script>
 
@@ -192,8 +208,11 @@
 />
 <CollisionGroups groups={[0]}>
 <T.Group position.z={$carPosZ} scale={0.13} rotation.y={0} layers={[1]}>
-  <ToyCar ref={toyCarRef} bind:playAnimation={playAnimation} bind:stopAnimation={stopAnimation} />
+<T.Group position.z={$carPosZ2}>
+  <ToyCar ref={toyCarRef} bind:playAnimation={playAnimation} bind:stopAnimation={stopAnimation} bind:playForwardMovingAnimation={playForwardMovingAnimation} bind:playBackwardMovingAnimation={playBackwardMovingAnimation} bind:stopMovingAnimation={stopMovingAnimation}/>
 </T.Group>
+</T.Group>
+
 </CollisionGroups>
 
 <AutoColliders shape={'cuboid'}>

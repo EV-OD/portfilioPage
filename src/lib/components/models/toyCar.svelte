@@ -9,7 +9,7 @@ Command: npx @threlte/gltf@2.0.3 D:\projects\portfolio\static\models\scene.glb -
 <script lang="ts">
   import type * as THREE from 'three'
   import { Group } from 'three'
-  import { T, type Props, type Events, type Slots, forwardEventHandlers } from '@threlte/core'
+  import { T, type Props, type Events, type Slots, forwardEventHandlers, useTask } from '@threlte/core'
   import { useGltf, useGltfAnimations } from '@threlte/extras'
 
   type $$Props = Props<THREE.Group>
@@ -18,6 +18,10 @@ Command: npx @threlte/gltf@2.0.3 D:\projects\portfolio\static\models\scene.glb -
 
   export let playAnimation: (animationName: ActionName) => void;
   export let stopAnimation: (animationName: ActionName) => void;
+
+  export let playForwardMovingAnimation: () => void;
+  export let playBackwardMovingAnimation: () => void;
+  export let stopMovingAnimation: () => void;
 
   export const ref = new Group()
 
@@ -62,6 +66,39 @@ Command: npx @threlte/gltf@2.0.3 D:\projects\portfolio\static\models\scene.glb -
     }
   }
 
+  let forwardWheelBoneRef: THREE.Group
+  let backwardWheelBoneRef: THREE.Group
+
+  let forwardWheelRotation = 0;
+  let backwardWheelRotation = 0;
+
+  let isMoving:0 | 1 | -1 = 0;
+  useTask(delta=>{
+    if(isMoving === 1){
+      // forwardWheelBoneRef.rotation.y += 0.1
+      // backwardWheelBoneRef.rotation.y += 0.1
+      forwardWheelRotation += 0.1
+      backwardWheelRotation += 0.1
+
+    }else if(isMoving === -1){
+      // forwardWheelBoneRef.rotation.y -= 0.1
+      // backwardWheelBoneRef.rotation.y -= 0.1
+      forwardWheelRotation -= 0.1
+      backwardWheelRotation -= 0.1
+    }
+  })
+  
+
+  playForwardMovingAnimation = () => {
+      isMoving = 1
+  }
+  playBackwardMovingAnimation = () => {
+      isMoving = -1
+  }
+  stopMovingAnimation = () => {
+    isMoving = 0
+  }
+
   stopAnimation = (name: ActionName)=> {
     if ($actions[name]) {
       $actions[name].stop();
@@ -94,10 +131,11 @@ Command: npx @threlte/gltf@2.0.3 D:\projects\portfolio\static\models\scene.glb -
         </T.Group>
       </T.Group>
       <T.Group name="Armature" position={[3, 0, 0]}>
-        <T.Group name="Bone" position={[2, 1, 0]} rotation={[-Math.PI / 2, 0, Math.PI / 2]}>
+        <T.Group  name="Bone" position={[2, 1, 0]} rotation={[-Math.PI / 2, 0, Math.PI / 2]}>
           <T.Group name="Bone001" position={[-4.14, 1, 0.15]} rotation={[0, 0.08, 0]}>
             <T.Group name="Wheels_Back_001" position={[-0.01, 3.97, 0.01]} rotation={[-Math.PI, 1.38, Math.PI / 2]}>
-              <T.Mesh
+              <T.Group rotation.x={forwardWheelRotation}>
+                <T.Mesh
                 name="pCylinder9_lambert5_0002"
                 geometry={gltf.nodes.pCylinder9_lambert5_0002.geometry}
                 material={gltf.materials['Rubber.001']}
@@ -112,10 +150,12 @@ Command: npx @threlte/gltf@2.0.3 D:\projects\portfolio\static\models\scene.glb -
                 geometry={gltf.nodes.pCylinder9_lambert5_0002_2.geometry}
                 material={gltf.materials['Metal.001']}
               />
+              </T.Group>
             </T.Group>
           </T.Group>
-          <T.Group name="Bone002" position={[2.63, 1, 0.15]} rotation={[0, 0.03, 0]}>
+          <T.Group ref={backwardWheelBoneRef} name="Bone002" position={[2.63, 1, 0.15]} rotation={[0, 0.03, 0]}>
             <T.Group name="Wheels_Back_" position={[0, 3.97, -0.01]} rotation={[Math.PI / 2, -Math.PI / 2, 0]}>
+              <T.Group rotation.x={backwardWheelRotation} >
               <T.Mesh
                 name="pCylinder9_lambert5_0001"
                 geometry={gltf.nodes.pCylinder9_lambert5_0001.geometry}
@@ -131,6 +171,7 @@ Command: npx @threlte/gltf@2.0.3 D:\projects\portfolio\static\models\scene.glb -
                 geometry={gltf.nodes.pCylinder9_lambert5_0001_2.geometry}
                 material={gltf.materials.Metal}
               />
+            </T.Group>
             </T.Group>
           </T.Group>
         </T.Group>
