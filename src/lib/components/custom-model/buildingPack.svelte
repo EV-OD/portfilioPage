@@ -65,5 +65,11 @@
     <T.Group position.z={5+ b1TotalWidth / -2}>
         <B1 bind:totalWidth={b1TotalWidth}/>
     </T.Group>
+	
+
+
+	<T.Group position.z={20 -b1TotalWidth / -2}>
+        <B1 bind:totalWidth={b1TotalWidth}/>
+    </T.Group>
 	<!-- {/each} -->
 </T.Group>

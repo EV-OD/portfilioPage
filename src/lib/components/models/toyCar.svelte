@@ -11,6 +11,7 @@ Command: npx @threlte/gltf@2.0.3 D:\projects\portfolio\static\models\scene.glb -
   import { Group } from 'three'
   import { T, type Props, type Events, type Slots, forwardEventHandlers, useTask } from '@threlte/core'
   import { useGltf, useGltfAnimations } from '@threlte/extras'
+  import { mapValue } from '../../../utils';
 
   type $$Props = Props<THREE.Group>
   type $$Events = Events<THREE.Group>
@@ -19,8 +20,8 @@ Command: npx @threlte/gltf@2.0.3 D:\projects\portfolio\static\models\scene.glb -
   export let playAnimation: (animationName: ActionName) => void;
   export let stopAnimation: (animationName: ActionName) => void;
 
-  export let playForwardMovingAnimation: () => void;
-  export let playBackwardMovingAnimation: () => void;
+  export let playForwardMovingAnimation: (increaseRate:number) => void;
+  export let playBackwardMovingAnimation: (increaseRate:number) => void;
   export let stopMovingAnimation: () => void;
 
   export const ref = new Group()
@@ -69,30 +70,20 @@ Command: npx @threlte/gltf@2.0.3 D:\projects\portfolio\static\models\scene.glb -
   let forwardWheelBoneRef: THREE.Group
   let backwardWheelBoneRef: THREE.Group
 
-  let forwardWheelRotation = 0;
-  let backwardWheelRotation = 0;
+  export let forwardWheelRotation = 0;
+  export let backwardWheelRotation = 0;
+
+  let increaseRate:number|null = null;
 
   let isMoving:0 | 1 | -1 = 0;
-  useTask(delta=>{
-    if(isMoving === 1){
-      // forwardWheelBoneRef.rotation.y += 0.1
-      // backwardWheelBoneRef.rotation.y += 0.1
-      forwardWheelRotation += 0.1
-      backwardWheelRotation += 0.1
-
-    }else if(isMoving === -1){
-      // forwardWheelBoneRef.rotation.y -= 0.1
-      // backwardWheelBoneRef.rotation.y -= 0.1
-      forwardWheelRotation -= 0.1
-      backwardWheelRotation -= 0.1
-    }
-  })
   
 
-  playForwardMovingAnimation = () => {
+  playForwardMovingAnimation = (increaseRateArg:number) => {
+      increaseRate = increaseRateArg
       isMoving = 1
   }
-  playBackwardMovingAnimation = () => {
+  playBackwardMovingAnimation = (increaseRateArg:number) => {
+    increaseRate = increaseRateArg
       isMoving = -1
   }
   stopMovingAnimation = () => {
