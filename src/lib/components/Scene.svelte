@@ -8,7 +8,14 @@
 	import Arrow from './custom-model/arrow.svelte';
 	import Road from './models/ROAD.svelte';
 	import Typewriter from 'svelte-typewriter';
-	import { BoxGeometry, Vector3, MeshStandardMaterial, Group, type Object3DEventMap, PerspectiveCamera } from 'three';
+	import {
+		BoxGeometry,
+		Vector3,
+		MeshStandardMaterial,
+		Group,
+		type Object3DEventMap,
+		PerspectiveCamera
+	} from 'three';
 	import BuildingPack from './custom-model/buildingPack.svelte';
 	import { layers } from '@threlte/extras';
 	import { tweened } from 'svelte/motion';
@@ -30,7 +37,7 @@
 	let cameraPosY = spring(0, { stiffness: 0.05, damping: 0.4 });
 	let userDetailState: 'main' | 'menu' | 'projects' | 'skills' | 'find-me' = 'main';
 
-  let cameraPosForCarZ = 0;
+	let cameraPosForCarZ = 0;
 
 	let isMenuShown = false;
 	let isContentShown = false;
@@ -48,9 +55,8 @@
 	let playBackwardMovingAnimation: (increaseRate: number) => void;
 	let stopMovingAnimation: () => void;
 
-
-  let forwardWheelRotation = 0;
-  let backwardWheelRotation = 0;
+	let forwardWheelRotation = 0;
+	let backwardWheelRotation = 0;
 
 	let buildingPackScale = tweened(0, { duration: 300, delay: 300, easing: cubicOut });
 
@@ -73,13 +79,37 @@
 		console.log('Switching to basic mode');
 	}
 
+	let JourneyStarted = false;
+
 	function startJourney() {
-		animationAngle = 0; // Reset animation angle
-		isMenuShown = true;
+		animationAngle = 0;
+    JourneyStarted = true;
+		isMenuShown = false;
 		isRotating = true;
 		rotationDirection = 1; // Rotate clockwise
 		cameraVector = new Vector3(0, $cameraPosY, 10);
 	}
+
+	useTask((delta) => {
+		if (JourneyStarted && cameraPosForCarZ < 18) {
+			shouldGoRight = false;
+      carIsMoving = -1;
+			carPosZFinal = $carPosZ - 1;
+			forwardWheelRotation -= 0.1;
+			backwardWheelRotation -= 0.1;
+			cameraRef.lookAt(0, 0, carPosZFinal);
+			setCarPosZ(carPosZFinal);
+      console.log('carPosZFinal', carPosZFinal);
+		}
+    if(cameraPosForCarZ >= 18){
+      JourneyStarted = false;
+      shouldGoLeft = true
+      shouldGoRight = true
+      carIsMoving = 0;
+      console.log('Journey finished');
+      console.log('carPosZFinal', carPosZFinal);
+    }
+	});
 
 	function handleBack() {
 		if (userDetailState === 'menu') {
@@ -99,8 +129,8 @@
 			// this means we were at main and it will go to menu
 			if (userDetailState === 'main' && rotationDirection === 1) {
 				userDetailState = 'menu';
-				isMenuShown = true;
-				isContentShown = false;
+				isMenuShown = false;
+				isContentShown = true;
 				$buildingPackScale = 1;
 			} else if (userDetailState === 'menu' && rotationDirection === -1) {
 				userDetailState = 'main';
@@ -117,6 +147,12 @@
 				} else if (userDetailState === 'main') {
 					diffAngle =
 						cameraVector.angleTo(new Vector3(0, $cameraPosY, 10)) - Math.abs(animationAngle);
+					shouldGoRight = false;
+					carPosZFinal = $carPosZ - 1;
+					forwardWheelRotation -= 0.1;
+					backwardWheelRotation -= 0.1;
+					cameraRef.lookAt(0, 0, carPosZFinal);
+					setCarPosZ(carPosZFinal);
 				}
 				if (diffAngle) {
 					cameraVector = cameraVector.applyAxisAngle(
@@ -138,11 +174,14 @@
 	let shouldGoLeft = true;
 	let shouldGoRight = true;
 
-  $:{
-    if(carIsMoving !== 0){
+	$: {
+		if (carIsMoving !== 0 && !JourneyStarted) {
+			cameraPosForCarZ = $carPosZ * -1;
+		}
+    if(JourneyStarted){
       cameraPosForCarZ = $carPosZ * -1;
     }
-  }
+	}
 
 	const setCarPosZ = async (posZ: number) => {
 		await carPosZ.set(posZ);
@@ -158,44 +197,45 @@
 			carIsMoving = 1;
 			shouldGoLeft = false;
 			carPosZFinal = $carPosZ + carIsMoving;
-      forwardWheelRotation += 0.1;
-      backwardWheelRotation += 0.1;
-      cameraRef.lookAt(0,0,carPosZFinal)
+			forwardWheelRotation += 0.1;
+			backwardWheelRotation += 0.1;
+			cameraRef.lookAt(0, 0, carPosZFinal);
 			setCarPosZ(carPosZFinal);
 		}
 		if (e.key === 'ArrowLeft' && shouldGoLeft) {
 			carIsMoving = -1;
 			shouldGoRight = false;
 			carPosZFinal = $carPosZ + carIsMoving;
-      forwardWheelRotation -= 0.1;
-      backwardWheelRotation -= 0.1;
-      cameraRef.lookAt(0,0,carPosZFinal)
+			forwardWheelRotation -= 0.1;
+			backwardWheelRotation -= 0.1;
+			cameraRef.lookAt(0, 0, carPosZFinal);
 			setCarPosZ(carPosZFinal);
 		}
 	};
-  $:{
-    if(cameraRef){
-      cameraRef.lookAt(0,0,cameraPosForCarZ)
-    }
-  }
-  
+	$: {
+		if (cameraRef) {
+			cameraRef.lookAt(0, 0, cameraPosForCarZ);
+		}
+	}
 
-  let cameraRef:PerspectiveCamera;
+	let cameraRef: PerspectiveCamera;
 </script>
 
 <svelte:window on:keydown|preventDefault={onKeyDown} />
 
 <T.Group position={cameraVector.toArray()} layers={'all'}>
-  <T.Group position.z={cameraPosForCarZ}>
-	<T.PerspectiveCamera makeDefault fov={20}
-  on:create={({ ref }) => {
-    cameraRef = ref;
-    // cameraRef.lookAt(0,0,cameraPosForCarZ)
-  }}
-  >
-		<OrbitControls enableZoom={false} enableDamping enabled={!isRotating} />
-	</T.PerspectiveCamera>
-</T.Group>
+	<T.Group position.z={cameraPosForCarZ}>
+		<T.PerspectiveCamera
+			makeDefault
+			fov={20}
+			on:create={({ ref }) => {
+				cameraRef = ref;
+				// cameraRef.lookAt(0,0,cameraPosForCarZ)
+			}}
+		>
+			<OrbitControls enableZoom={false} enableDamping enabled={!isRotating} />
+		</T.PerspectiveCamera>
+	</T.Group>
 </T.Group>
 
 <T.Mesh rotation.x={-Math.PI / 2} receiveShadow>
@@ -228,8 +268,8 @@
 				bind:playForwardMovingAnimation
 				bind:playBackwardMovingAnimation
 				bind:stopMovingAnimation
-        bind:forwardWheelRotation
-        bind:backwardWheelRotation
+				bind:forwardWheelRotation
+				bind:backwardWheelRotation
 			/>
 		</T.Group>
 	</T.Group>
@@ -265,7 +305,7 @@
 			</Typewriter>
 			<Typewriter mode="loop">
 				<p>
-					Hi, I'm <strong class="high head-high">Rabin</strong>, a passionate
+					Hi, I'm <strong class="high head-high">Rabin Lamichhane</strong>, a passionate
 					<strong class="high">developer</strong> with a knack for creating dynamic and responsive applications.
 					With a strong foundation in JavaScript, Svelte, and modern web technologies, I strive to build
 					user-friendly and efficient solutions. Explore my projects and get to know more about my work.
