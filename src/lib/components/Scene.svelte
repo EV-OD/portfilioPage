@@ -23,6 +23,8 @@
 	import type { ActionName } from './models/toyCar.svelte';
 	import { mapValue } from '../../utils';
 
+	import MySkill from './ui/mySkill.svelte';
+
 	layers();
 
 	interactivity();
@@ -80,42 +82,51 @@
 	}
 
 	let JourneyStarted = false;
+	let shouldMySkillbeShown = false;
+	let wasJourneyStarted = false;
 
 	function startJourney() {
 		animationAngle = 0;
-    JourneyStarted = true;
+		JourneyStarted = true;
+		wasJourneyStarted = true;
 		isMenuShown = false;
 		isRotating = true;
 		rotationDirection = 1; // Rotate clockwise
 		cameraVector = new Vector3(0, $cameraPosY, 10);
 	}
 
+
 	useTask((delta) => {
 		if (JourneyStarted && cameraPosForCarZ < 18) {
 			shouldGoRight = false;
-      carIsMoving = -1;
+			carIsMoving = -1;
 			carPosZFinal = $carPosZ - 1;
 			forwardWheelRotation -= 0.1;
 			backwardWheelRotation -= 0.1;
 			cameraRef.lookAt(0, 0, carPosZFinal);
 			setCarPosZ(carPosZFinal);
-      console.log('carPosZFinal', carPosZFinal);
 		}
-    if(cameraPosForCarZ >= 18){
-      JourneyStarted = false;
-      shouldGoLeft = true
-      shouldGoRight = true
-      carIsMoving = 0;
-      console.log('Journey finished');
-      console.log('carPosZFinal', carPosZFinal);
-    }
+		if (cameraPosForCarZ >= 18) {
+			JourneyStarted = false;
+			shouldGoLeft = true;
+			shouldGoRight = true;
+			carIsMoving = 0;
+		}
+		if (cameraPosForCarZ <= -8) {
+			shouldMySkillbeShown = true;
+		} else {
+			shouldMySkillbeShown = false;
+		}
+
+		if(cameraPosForCarZ <= 0 && wasJourneyStarted){
+			isContentShown = false;
+		}
 	});
 
 	function handleBack() {
 		if (userDetailState === 'menu') {
 			animationAngle = 0; // Reset animation angle
 			isRotating = true;
-			isContentShown = true;
 			rotationDirection = -1; // Rotate counterclockwise
 			$buildingPackScale = 0;
 		}
@@ -130,12 +141,10 @@
 			if (userDetailState === 'main' && rotationDirection === 1) {
 				userDetailState = 'menu';
 				isMenuShown = false;
-				isContentShown = true;
 				$buildingPackScale = 1;
 			} else if (userDetailState === 'menu' && rotationDirection === -1) {
 				userDetailState = 'main';
 				isMenuShown = false;
-				isContentShown = true;
 			}
 		} else {
 			if (isRotating) {
@@ -178,9 +187,9 @@
 		if (carIsMoving !== 0 && !JourneyStarted) {
 			cameraPosForCarZ = $carPosZ * -1;
 		}
-    if(JourneyStarted){
-      cameraPosForCarZ = $carPosZ * -1;
-    }
+		if (JourneyStarted) {
+			cameraPosForCarZ = $carPosZ * -1;
+		}
 	}
 
 	const setCarPosZ = async (posZ: number) => {
@@ -275,7 +284,7 @@
 	</T.Group>
 </CollisionGroups>
 
-<AutoColliders shape={'cuboid'}>
+<!-- <AutoColliders shape={'cuboid'}>
 	<T.Mesh
 		receiveShadow
 		castShadow
@@ -287,7 +296,7 @@
 			color: 0x333333
 		})}
 	/>
-</AutoColliders>
+</AutoColliders> -->
 
 <T.Group scale={[0.5, 0.001, 0.5]} position.y={0}>
 	<Road />
@@ -297,8 +306,15 @@
 	<BuildingPack />
 </T.Group>
 
+{#if shouldMySkillbeShown}
+	<T.Group>
+		<MySkill {cameraPosForCarZ} />
+	</T.Group>
+{/if}
+
 {#if isContentShown}
 	<HTML transform position.z={-10} position.y={2} scale={0.2}>
+		<div class={isContentShown ? "" : "hide"}>
 		<div class="hero">
 			<Typewriter mode="concurrent">
 				<h1>Welcome to My World</h1>
@@ -311,10 +327,7 @@
 					user-friendly and efficient solutions. Explore my projects and get to know more about my work.
 				</p>
 			</Typewriter>
-		</div>
-	</HTML>
-	<HTML transform position.z={-10} position.y={1} position.x={3} scale={0.2}>
-		<div class="project" on:click={startJourney}>
+		<div tabindex="1" role="button" class="project" on:click={startJourney}>
 			Let's Start the Journey !
 			<svg
 				width="40"
@@ -330,96 +343,13 @@
 				/>
 			</svg>
 		</div>
+		</div>
+	</div>
 	</HTML>
+
+
 {/if}
 
-{#if isMenuShown}
-	<HTML
-		transform
-		position.x={10}
-		position.z={1}
-		rotation.y={Math.PI / -2}
-		position.y={3}
-		scale={0.2}
-	>
-		<div class="project">
-			Projects
-			<svg
-				width="40"
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 24 24"
-				fill="currentColor"
-				class="size-6"
-			>
-				<path
-					fill-rule="evenodd"
-					d="M16.72 7.72a.75.75 0 0 1 1.06 0l3.75 3.75a.75.75 0 0 1 0 1.06l-3.75 3.75a.75.75 0 1 1-1.06-1.06l2.47-2.47H3a.75.75 0 0 1 0-1.5h16.19l-2.47-2.47a.75.75 0 0 1 0-1.06Z"
-					clip-rule="evenodd"
-				/>
-			</svg>
-		</div>
-	</HTML>
-	<HTML
-		transform
-		position.x={10}
-		position.z={2}
-		rotation.y={Math.PI / -2}
-		position.y={3}
-		scale={0.2}
-	>
-		<div class="project">
-			Skills
-			<svg
-				width="40"
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 24 24"
-				fill="currentColor"
-				class="size-6"
-			>
-				<path
-					fill-rule="evenodd"
-					d="M7.28 7.72a.75.75 0 0 1 0 1.06l-2.47 2.47H21a.75.75 0 0 1 0 1.5H4.81l2.47 2.47a.75.75 0 1 1-1.06 1.06l-3.75-3.75a.75.75 0 0 1 0-1.06l3.75-3.75a.75.75 0 0 1 1.06 0Z"
-					clip-rule="evenodd"
-				/>
-			</svg>
-		</div>
-	</HTML>
-	<HTML
-		transform
-		position.x={10}
-		position.z={3}
-		rotation.y={Math.PI / -2}
-		position.y={3}
-		scale={0.2}
-	>
-		<div class="project">Find me</div>
-	</HTML>
-	<HTML
-		transform
-		position.x={10}
-		position.z={-3}
-		rotation.y={Math.PI / -2}
-		position.y={3}
-		scale={0.2}
-	>
-		<div class="project" on:click={handleBack}>
-			Back
-			<svg
-				width="40"
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 24 24"
-				fill="currentColor"
-				class="size-6"
-			>
-				<path
-					fill-rule="evenodd"
-					d="M9.53 2.47a.75.75 0 0 1 0 1.06L4.81 8.25H15a6.75 6.75 0 0 1 0 13.5h-3a.75.75 0 0 1 0-1.5h3a5.25 5.25 0 1 0 0-10.5H4.81l4.72 4.72a.75.75 0 1 1-1.06 1.06l-6-6a.75.75 0 0 1 0-1.06l6-6a.75.75 0 0 1 1.06 0Z"
-					clip-rule="evenodd"
-				/>
-			</svg>
-		</div>
-	</HTML>
-{/if}
 
 {#if showOptions}
 	<HTML position.y={0.1} position.z={0} scale={0.3} transform>
@@ -493,6 +423,8 @@
 		line-height: 3ch;
 	}
 	.project {
+		width: 400px;
+		margin-left: auto;
 		background-color: transparent;
 		padding: 20px;
 		border-radius: 10px;
@@ -529,5 +461,8 @@
 	}
 	.head-high {
 		background-color: rgb(190, 100, 100);
+	}
+	.hide{
+		display: none;
 	}
 </style>
