@@ -90,6 +90,7 @@
 		JourneyStarted = true;
 		wasJourneyStarted = true;
 		isMenuShown = false;
+		isContentShown = true;
 		isRotating = true;
 		rotationDirection = 1; // Rotate clockwise
 		cameraVector = new Vector3(0, $cameraPosY, 10);
@@ -100,6 +101,7 @@
 		if (JourneyStarted && cameraPosForCarZ < 18) {
 			shouldGoRight = false;
 			carIsMoving = -1;
+			isContentShown = true;
 			carPosZFinal = $carPosZ - 1;
 			forwardWheelRotation -= 0.1;
 			backwardWheelRotation -= 0.1;
@@ -174,7 +176,7 @@
 	});
 
 	$: {
-		if ($carPosZ > -5) {
+		if ($carPosZ > -5 && !wasJourneyStarted) {
 			isContentShown = true;
 			// isMenuShown = true;
 		}
